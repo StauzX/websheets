@@ -141,6 +141,22 @@ div.CodeMirror-cursors {
     font-weight: bold;
     width: 100%;
     font-size: 100%;
+    color: black;
+    border: 1px solid #a2a2a2;
+    border-radius: 2px;
+    cursor: pointer;
+    padding: 10px 5px;
+    background-color: #f8f6f6;
+}
+
+.wscontainer button:hover:enabled{
+    background-color: #eeeeee;
+}
+
+.wscontainer button:disabled{
+    color: #b9bcbe;
+    border: 1px solid #f8f6f6;
+    cursor: not-allowed;
 }
 
 code, pre, tt, .wscontainer .CodeMirror, .CodeMirror * {
@@ -275,3 +291,28 @@ background: linear-gradient(to right,  #ffccee 49%,#ffffff 51%); /* W3C */
 filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#ffccee', endColorstr='#ffffff',GradientType=1 ); /* IE6-9 */
 }
 
+.wscontainer.ws-fullscreen{
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 999;
+}
+
+.wscontainer.ws-fullscreen .exercise-body{
+  padding: 0px 10px;
+  overflow: scroll;
+  overflow-x: hidden;
+}
+
+.wscontainer.ws-fullscreen .results-wrapper{
+  margin-top: 10px;
+}
+
+.wscontainer.ws-fullscreen table.buttonTable{
+  position: fixed;
+  bottom: 3px;
+  left: 0px;
+  z-index: 9999;
+}

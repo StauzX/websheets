@@ -131,17 +131,17 @@ websheets.createAt = function(slug, data, containerdiv, preview) {
    <div class="description"></div> \
    <textarea class="code" name="code" ></textarea> \
    <table class="buttonTable"><tbody><tr> \
-    <td style="width:33%"> \
+    <td style="width:25%"> \
     <button class="noprint submitButton"> \
      Submit \
     </button> \
    </td> \
-   <td style="width:33%"> \
+   <td style="width:25%"> \
     <button class="noprint resetButton"> \
      Start over \
     </button> \
    </td> \
-    <td style="width:33%"> \
+    <td style="width:25%"> \
     <button class="noprint showrefButton"> \
      View reference solution \
     </button> \
@@ -149,9 +149,16 @@ websheets.createAt = function(slug, data, containerdiv, preview) {
      Go back to my solution \
     </button> \
    </td> \
+   <td style="width:25%"> \
+    <button class="noprint fullscreenButton"> \
+     Fullscreen \
+    </button> \
+   </td> \
    </tbody></table> \
-   <div class="noprint results"></div> \
-   <div class="noprint after-results" style="display:none"></div> \
+   <div class="results-wrapper"> \
+     <div class="noprint results"></div> \
+     <div class="noprint after-results" style="display:none"></div> \
+   </div> \
   </div> <!-- exercise-body --> \
   </div> <!-- container -->';
 
@@ -206,6 +213,7 @@ websheets.Websheet = function(slug, data, div, preview) {
    this.num_submissions = 0;
    this.viewing_ref = false;
    this.changing_viewing_ref = false;
+   this.fullscreen = false;
    this.saved_chunks = undefined; // remember user code when viewing ref
    this.load_data = undefined;
    this.wse = undefined; // websheetEditor object
@@ -238,6 +246,24 @@ websheets.Websheet = function(slug, data, div, preview) {
    
    $(this.div).find('.showrefButton').click( function(eventObject) {
       this_ws.showRef();
+   });
+
+   $(this.div).find('.fullscreenButton').click( function(eventObject) {
+      if(this_ws.fullscreen){
+        this_ws.leaveFullScreen();
+        $(this_ws.div).find('.exercise-body').removeAttr('style');
+      }else{
+        this_ws.enterFullScreen();
+        var height = window.innerHeight - 80;
+        $(this_ws.div).find('.exercise-body').css('max-height', height);
+      }
+   });
+
+   $( window ).resize(function() {
+      if(this_ws.fullscreen){
+        var height = window.innerHeight - 80;
+        $(this_ws.div).find('.exercise-body').css('max-height', height);
+      }
    });
    
    if (data) 
@@ -478,40 +504,43 @@ websheets.Websheet.prototype.submit = function() {
              ajax_uid_intended: websheets.authinfo.username},
       dataType: "json",
       error: function(jqXHR, textStatus, errorThrown) {
-	 $(this_ws.div).find(".submitButton").removeAttr("disabled");
+     $(this_ws.div).find(".submitButton").removeAttr("disabled");
          $(this_ws.div).find(".results").html(
             "Internal Ajax Error!!! Please contact course staff. <br>" + 
                "status: " + textStatus + "<br>" + 
                (textStatus == "parsererror" ? "" : 
                 ("error thrown: " + errorThrown + "<br>")) + 
                "response text:<br><pre>" 
-               + jqXHR.responseText + "</pre>");  
+               + jqXHR.responseText + "</pre>");
+               if(this_ws.fullscreen){
+                $(this_ws.div).find('.results-wrapper')[0].scrollIntoView()
+               }  
       },
       success: function(data) {
         if ('error_span' in data && data['error_span'] != '') {
-	  $(this_ws.div).find(".submitButton").removeAttr("disabled");
+      $(this_ws.div).find(".submitButton").removeAttr("disabled");
           $(this_ws.div).find(".results").html(data['error_span']);
           return;
         }
 
         if (!this_ws.reference_sol && data.reference_sol) {
           this_ws.reference_sol = data.reference_sol;
-	  $(this_ws.div).find(".showrefButton").removeAttr("disabled");          
-	  $(this_ws.div).find(".showrefButton").html("View reference solution");          
+      $(this_ws.div).find(".showrefButton").removeAttr("disabled");          
+      $(this_ws.div).find(".showrefButton").html("View reference solution");          
         }
 
-	 //console.log(data);
-	 this_ws.num_submissions++;
+   //console.log(data);
+   this_ws.num_submissions++;
         if (data.anon_reference_sol)
           this_ws.anon_reference_sol = data.anon_reference_sol;
         if (!this_ws.reference_sol && ["never", "infinity"].indexOf(this_ws.load_data.attempts_until_ref)==-1) 
             this_ws.updateTriesButton(); 
-	 $(this_ws.div).find(".submitButton").removeAttr("disabled");
-	 if (data.category == 'Passed' && !this_ws.viewing_ref) {
-	    $(this_ws.div).addClass("passed");
-	    $(this_ws.div).addClass("ever-passed");
-	 }
-	 var results = data.results;
+   $(this_ws.div).find(".submitButton").removeAttr("disabled");
+   if (data.category == 'Passed' && !this_ws.viewing_ref) {
+      $(this_ws.div).addClass("passed");
+      $(this_ws.div).addClass("ever-passed");
+   }
+   var results = data.results;
          if (data.epilogue) {
             $(this_ws.div).find(".after-results")
                .html("<div class='epilogue'><div class='header'>Epilogue</div>" 
@@ -529,6 +558,9 @@ websheets.Websheet.prototype.submit = function() {
          //$("html, body").animate({ 
          //    scrollTop: $(document).height() 
          //}, "slow");
+         if(this_ws.fullscreen){
+          $(this_ws.div).find('.results-wrapper')[0].scrollIntoView()
+         } 
       }
    });
 };
@@ -567,6 +599,17 @@ websheets.Websheet.prototype.showRef = function() {
    this.setting_viewing_ref = false;
 }
 
+websheets.Websheet.prototype.enterFullScreen = function(){
+    $(this.div).addClass("ws-fullscreen");
+    $(this.div).find(".fullscreenButton").text('Exit Fullscreen');
+    this.fullscreen = true;
+}
+
+websheets.Websheet.prototype.leaveFullScreen = function(){
+    $(this.div).removeClass("ws-fullscreen");
+    $(this.div).find(".fullscreenButton").text('Fullscreen');
+    this.fullscreen = false;
+}
 
 // WebsheetEditor pseudo-class is just for the CodeMirror interactions,
 // not for the surrounding UI
@@ -862,18 +905,18 @@ websheets.WebsheetEditor = function(textarea_element, fragments, initial_snippet
    
    var setUserAreas = function(data) {
       for (var i=0; i<data.length; i++) {
-	 var f = editable[i].find().from;
-	 var t = editable[i].find().to;
+   var f = editable[i].find().from;
+   var t = editable[i].find().to;
 //         console.log(f, t);
-	 if (data[i].indexOf("\n") != -1) {
-	   f = f.line+f.ch==0 ? f : {line: f.line+1, ch: 0};
-	    t = {line: t.line-1, ch: cm.getLine(t.line-1).length};
-	 }
-	 else {
-	    f = {line: f.line, ch: f.ch+1};
-	    t = {line: t.line, ch: t.ch-1};
-	 }
-	 cm.replaceRange(data[i].substring(1, data[i].length-1), f, t);
+   if (data[i].indexOf("\n") != -1) {
+     f = f.line+f.ch==0 ? f : {line: f.line+1, ch: 0};
+      t = {line: t.line-1, ch: cm.getLine(t.line-1).length};
+   }
+   else {
+      f = {line: f.line, ch: f.ch+1};
+      t = {line: t.line, ch: t.ch-1};
+   }
+   cm.replaceRange(data[i].substring(1, data[i].length-1), f, t);
       }
    }
    
